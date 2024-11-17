@@ -9,9 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@nextui-org/react": "^2.4.8",
     "@xyflow/react": "^12.3.0",
+    "framer-motion": "^11.11.17",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "reactflow": "^11.11.4"
   },
   "license": "MIT",
   "devDependencies": {

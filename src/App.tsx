@@ -8,31 +8,28 @@ import {
   Background,
   Controls,
   Panel,
-  Position,
   type Node,
   type Edge,
   type ColorMode,
   type OnConnect,
-  SelectionMode,
+  useReactFlow,
+  ReactFlowProvider,
+  NodeChange,
 } from "@xyflow/react";
 
 import "@xyflow/react/dist/style.css";
-import DarkModeToggle from "./components/DarkModeToggle";
 
-const nodeDefaults = {
-  sourcePosition: Position.Bottom,
-  targetPosition: Position.Top,
-  Animation: true,
-  selectionMode: SelectionMode.Full,
-};
+import { Input } from "@nextui-org/react";
+
+let id = 1;
+const getId = () => `${id++}`;
 
 const initialNodes: Node[] = [
   {
     id: "A",
     type: "input",
-    position: { x: 400, y: 100 },
-    data: { label: "A👋" },
-    className: "node-animated",
+    position: { x: 0, y: 0 },
+    data: { label: "Root" },
   },
 ];
 
@@ -43,38 +40,41 @@ const ColorModeFlow = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [newNodeName, setNewNodeName] = useState(""); // New node name
   const [nextNodeId, setNextNodeId] = useState(1); // Track node IDs
+  const { screenToFlowPosition } = useReactFlow();
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const onConnect: OnConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  /* const onConnectEnd: OnConnectEnd = useCallback(
-    (event) => {
-      const targetIsPane = event.target.classList.contains("react-flow__pane");
-
-      if (targetIsPane) {
+  const onConnectEnd = useCallback(
+    (event, connectionState) => {
+      // when a connection is dropped on the pane it's not valid
+      if (!connectionState.isValid) {
         // we need to remove the wrapper bounds, in order to get the correct position
-        const { top, left } = reactFlowWrapper.current.getBoundingClientRect();
         const id = getId();
+        const { clientX, clientY } =
+          "changedTouches" in event ? event.changedTouches[0] : event;
         const newNode = {
           id,
-          // we are removing the half of the node width (75) to center the new node
-          position: project({
-            x: event.clientX - left - 75,
-            y: event.clientY - top
+          position: screenToFlowPosition({
+            x: clientX,
+            y: clientY,
           }),
-          data: { label: `Node ${id}` }
+          data: { label: `Node ${id}` },
+          origin: [0.5, 0.0],
         };
 
-        setNodes((nds) => nds.concat(newNode));
+        setNodes((nds) => [...nds, newNode]);
         setEdges((eds) =>
-          eds.concat({ id, source: connectingNodeId.current, target: id })
+          eds.concat({ id, source: connectionState.fromNode.id, target: id })
         );
       }
+      console.log(id);
     },
-    [project]
-  ); */
+    [screenToFlowPosition]
+  );
 
   const onChange: ChangeEventHandler<HTMLSelectElement> = (evt) => {
     setColorMode(evt.target.value as ColorMode);
@@ -86,15 +86,40 @@ const ColorModeFlow = () => {
 
     const newNode: Node = {
       id: `node-${nextNodeId}`,
-      position: { x: Math.random() * 300, y: Math.random() * 300 }, // Random position within view
+      position: { x: Math.random() * 50, y: Math.random() * 50 }, // Random position within view
       data: { label: newNodeName },
-      ...nodeDefaults,
     };
 
     setNodes((nds) => [...nds, newNode]);
     setNextNodeId(nextNodeId + 1); // Increment for unique ID
     setNewNodeName(""); // Clear input field after creation
   };
+
+  // Track the selected node
+  const handleNodeSelect = useCallback((changes: NodeChange[]) => {
+    const selectedNode = changes.find((change) => change.selected)?.id || null;
+    setSelectedNodeId(selectedNode);
+    console.log("Selected node:", selectedNode);
+  }, []);
+
+  // Delete the selected node
+  const deleteSelectedNode = useCallback(() => {
+    if (!selectedNodeId) return;
+
+    // Remove the node
+    setNodes((nds) => nds.filter((node) => node.id !== selectedNodeId));
+
+    // Remove edges connected to the node
+    setEdges((eds) =>
+      eds.filter(
+        (edge) =>
+          edge.source !== selectedNodeId && edge.target !== selectedNodeId
+      )
+    );
+
+    // Clear selection after deletion
+    setSelectedNodeId(null);
+  }, [selectedNodeId, setNodes, setEdges]);
 
   return (
     <div style={{ height: "100vh" }}>
@@ -103,9 +128,15 @@ const ColorModeFlow = () => {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onNodesChange={(changes) => {
+          onNodesChange(changes);
+          handleNodeSelect(changes);
+        }}
         colorMode={colorMode}
+        onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         fitView
+        fitViewOptions={{ padding: 2 }}
       >
         <MiniMap />
         <Background />
@@ -118,22 +149,33 @@ const ColorModeFlow = () => {
             <option value="light">light</option>
             <option value="system">system</option>
           </select>
-          <DarkModeToggle />
         </Panel>
 
         {/* New Node Panel */}
         <Panel position="top-left">
-          <input
+          <Input
             type="text"
             placeholder="Enter node name"
             value={newNodeName}
             onChange={(e) => setNewNodeName(e.target.value)}
+            onNodesChange={(changes: NodeChange) => {
+              onNodesChange(changes);
+              handleNodeSelect(changes); // Track node selection
+            }}
+            onConnectEnd={onConnectEnd}
           />
           <button onClick={addNode}>Add Node</button>
+          <button onClick={deleteSelectedNode} disabled={!selectedNodeId}>
+            Delete Node{" "}
+          </button>
         </Panel>
       </ReactFlow>
     </div>
   );
 };
 
-export default ColorModeFlow;
+export default () => (
+  <ReactFlowProvider>
+    <ColorModeFlow />
+  </ReactFlowProvider>
+);
