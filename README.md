@@ -27,7 +27,7 @@ Vite React TypeScript app using the react flow
 // Option 2 - allocate remaining tree to a parent of the node that is being deleted
 
 // ---- Step 4 -----
-// Add functionality to add a node in the middle of the tree
+/x/ Add functionality to add a node in the middle of the tree
 
 // ---What we are looking for---
 // Simple, clear, readable code. How well structured it is? Clear separation of concerns? Can anyone just look at it and get the idea to what is being done? Does it follow any standards?
