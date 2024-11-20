@@ -16,6 +16,7 @@ import {
   getIncomers,
   getOutgoers,
   getConnectedEdges,
+  OnConnectEnd,
 } from "@xyflow/react";
 
 import {
@@ -40,7 +41,7 @@ const gender = [
   { key: 2, name: "female", value: "#0000ff" },
 ];
 const ColorModeFlow = () => {
-  const [colorMode, setColorMode] = useState<ColorMode>("system");
+  const [colorMode, setColorMode] = useState<ColorMode>("dark");
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [newNodeName, setNewNodeName] = useState(""); // New node name
@@ -87,7 +88,9 @@ const ColorModeFlow = () => {
       position: newNodePosition,
       data: { label: nodeName },
       style: {
-        backgroundColor: newNodeGender,
+        backgroundColor: newNodeGender === "1" ? "#4078F9" : "#E09595",
+        color: "black",
+        borderRadius: "20px",
       },
     };
     console.log(newNodeGender);
@@ -165,7 +168,7 @@ const ColorModeFlow = () => {
   );
 
   const deleteSelectedNode = useCallback(
-    (connectionState) => {
+    (connectionState: OnConnectEnd) => {
       if (!selectedNodeId) return;
 
       // Helper function to find all descendant nodes recursively
@@ -213,7 +216,7 @@ const ColorModeFlow = () => {
   );
 
   return (
-    <div style={{ height: "100vh", backgroundColor: "black" }}>
+    <div style={{ height: "100vh", backgroundColor: "#fff" }}>
       <ReactFlow
         nodes={nodes}
         nodeTypes={nodeTypes}
@@ -230,7 +233,6 @@ const ColorModeFlow = () => {
         onConnectEnd={onConnectEnd}
         fitView
         fitViewOptions={{ padding: 2 }}
-        style={{ backgroundColor: "#fff" }}
       >
         <MiniMap />
         <Background />
@@ -240,19 +242,20 @@ const ColorModeFlow = () => {
           isOpen={isNameModalOpen}
           onOpenChange={setIsNameModalOpen}
           placement="top-center"
-          className="flex flex-col items-center flex-grow justify-center bg-slate-400 opacity-80"
+          className="flex flex-col items-center flex-grow justify-center mt-20 pt-5 bg-[#585E5B] opacity-90"
         >
           <ModalContent>
             <ModalBody>
               <Input
-                placeholder="Enter node name"
+                placeholder="Enter Node Name"
                 value={nodeName}
                 onChange={(e) => setNodeName(e.target.value)}
+                className="w-full"
               />
               <Select
                 label="Select Gender"
-                className="max-w-xs"
-                onChange={(e) => setNewNodeGender(e)}
+                className="w-full"
+                onChange={(e) => setNewNodeGender(e.target.value)}
               >
                 {gender.map((g) => (
                   <SelectItem key={g.key}>{g.name}</SelectItem>
@@ -263,6 +266,7 @@ const ColorModeFlow = () => {
               <Button
                 color="danger"
                 variant="flat"
+                className="bg-gradient-to-tr from-pink-500 to-yellow-500 hover:to-orange-500 text-white shadow-lg"
                 onPress={() => {
                   setIsNameModalOpen(false);
                   setNodeName("");
@@ -270,7 +274,11 @@ const ColorModeFlow = () => {
               >
                 Cancel
               </Button>
-              <Button color="primary" onPress={createNodeWithName}>
+              <Button
+                color="primary"
+                className="bg-gradient-to-r from-teal-400 to-blue-500 hover:from-pink-500 hover:to-orange-500 text-white shadow-lg"
+                onPress={createNodeWithName}
+              >
                 Add Node
               </Button>
             </ModalFooter>

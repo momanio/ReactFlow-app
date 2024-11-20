@@ -1,12 +1,10 @@
-import { ReactFlowProvider } from "@xyflow/react";
-
-import ColorModeFlow from "./pages/ColorMode";
 import "./App.css";
+import Home from "./pages/Home";
 function App() {
   return (
-    <ReactFlowProvider>
-      <ColorModeFlow />
-    </ReactFlowProvider>
+    <div className="container w-full">
+      <Home />
+    </div>
   );
 }
 

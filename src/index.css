@@ -13,7 +13,9 @@ html,
 body,
 #root {
   height: 100%;
+  weight: 100%;
   margin: 0;
+  padding: 0;
 }
 @keyframes scaleIn {
   0% {
@@ -33,7 +35,7 @@ body,
   width: 30px;
   height: 14px;
   border-radius: 3px;
-  background-color: #784be8;
+  background-color: #d9d2ec;
 }
 
 .react-flow .react-flow__handle-top {
