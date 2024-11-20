@@ -13,10 +13,8 @@ import {
   type OnConnect,
   useReactFlow,
   NodeChange,
-  getIncomers,
-  getOutgoers,
-  getConnectedEdges,
   OnConnectEnd,
+  XYPosition,
 } from "@xyflow/react";
 
 import {
@@ -31,21 +29,17 @@ import {
 } from "@nextui-org/react";
 import { initialNodes, nodeTypes } from "../nodes";
 import { initialEdges, edgeTypes } from "../edges";
-
+import { Gender } from "../constants";
 import "@xyflow/react/dist/style.css";
 
 let id = 1;
 const getId = () => `${id++}`;
-const gender = [
-  { key: 1, name: "male", value: "#ff0000" },
-  { key: 2, name: "female", value: "#0000ff" },
-];
+
 const ColorModeFlow = () => {
   const [colorMode, setColorMode] = useState<ColorMode>("dark");
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [newNodeName, setNewNodeName] = useState(""); // New node name
-  const [nextNodeId, setNextNodeId] = useState(1); // Track node IDs
+
   const { screenToFlowPosition } = useReactFlow();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -66,7 +60,7 @@ const ColorModeFlow = () => {
         const { clientX, clientY } =
           "changedTouches" in event ? event.changedTouches[0] : event;
 
-        const position = screenToFlowPosition({
+        const position: XYPosition = screenToFlowPosition({
           x: clientX,
           y: clientY,
         });
@@ -104,7 +98,7 @@ const ColorModeFlow = () => {
         target: id,
       })
     );
-    console.log("Gender", newNodeGender);
+    console.log("Parent", newConnectionState?.fromNode?.id);
     // Reset modal state
     setNodeName("");
     setNewNodePosition(null);
@@ -116,56 +110,13 @@ const ColorModeFlow = () => {
   };
 
   // Add new node function
-  const addNode = () => {
-    if (!newNodeName) return; // Avoid creating a node without a name
-
-    const newNode: Node = {
-      id: `node-${nextNodeId}`,
-      position: { x: Math.random() * 50, y: Math.random() * 50 }, // Random position within view
-      data: { label: newNodeName },
-    };
-
-    console.log(newNode);
-    setNodes((nds) => [...nds, newNode]);
-    setNextNodeId(nextNodeId + 1); // Increment for unique ID
-    setNewNodeName(""); // Clear input field after creation
-  };
 
   // Track the selected node
   const handleNodeSelect = useCallback((changes: NodeChange[]) => {
     const selectedNode = changes.find((change) => change.selected)?.id || null;
     setSelectedNodeId(selectedNode);
+    console.log("Selected node:", selectedNode);
   }, []);
-
-  const onNodesDelete = useCallback(
-    (deleted) => {
-      setEdges(
-        deleted.reduce((acc, node) => {
-          const incomers = getIncomers(node, nodes, edges);
-          const outgoers = getOutgoers(node, nodes, edges);
-          const connectedEdges = getConnectedEdges([node], edges);
-
-          const remainingEdges = acc.filter(
-            (edge) =>
-              !connectedEdges.find(
-                (connectedEdge) => connectedEdge.id === edge.id
-              )
-          );
-
-          const createdEdges = incomers.flatMap(({ id: source }) =>
-            outgoers.map(({ id: target }) => ({
-              id: `${source}->${target}`,
-              source,
-              target,
-            }))
-          );
-
-          return [...remainingEdges, ...createdEdges];
-        }, edges)
-      );
-    },
-    [nodes, edges, setEdges, setNodes]
-  );
 
   const deleteSelectedNode = useCallback(
     (connectionState: OnConnectEnd) => {
@@ -207,6 +158,7 @@ const ColorModeFlow = () => {
           target: getId(),
         })
       );
+      setNodes((nds) => [...nds, newNode]);
       console.log("Deleted node and its sub-tree:");
 
       // Clear the selected node
@@ -227,7 +179,6 @@ const ColorModeFlow = () => {
           onNodesChange(changes);
           handleNodeSelect(changes);
         }}
-        onNodesDelete={onNodesDelete}
         colorMode={colorMode}
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
@@ -257,7 +208,7 @@ const ColorModeFlow = () => {
                 className="w-full"
                 onChange={(e) => setNewNodeGender(e.target.value)}
               >
-                {gender.map((g) => (
+                {Gender.map((g) => (
                   <SelectItem key={g.key}>{g.name}</SelectItem>
                 ))}
               </Select>
@@ -296,16 +247,7 @@ const ColorModeFlow = () => {
 
         {/* New Node Panel */}
         <Panel position="top-left">
-          <Input
-            className="rounded-lg display-block mb-2"
-            type="text"
-            placeholder="Enter node name"
-            radius="lg"
-            value={newNodeName}
-            onChange={(e) => setNewNodeName(e.target.value)}
-          />
-          <Button onPress={addNode}>Add Node</Button>
-          <Button onClick={deleteSelectedNode} hidden={!selectedNodeId}>
+          <Button onClick={deleteSelectedNode} disabled={!selectedNodeId}>
             Delete Node{" "}
           </Button>
         </Panel>
