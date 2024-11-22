@@ -17,20 +17,12 @@ import {
   XYPosition,
 } from "@xyflow/react";
 
-import {
-  Modal,
-  ModalContent,
-  ModalBody,
-  ModalFooter,
-  Button,
-  Input,
-  Select,
-  SelectItem,
-} from "@nextui-org/react";
+import { Button } from "@nextui-org/react";
 import { initialNodes, nodeTypes } from "../nodes";
 import { initialEdges, edgeTypes } from "../edges";
-import { Gender } from "../constants";
 import "@xyflow/react/dist/style.css";
+import { AppNode } from "../nodes/types";
+import NodeModal from "../components/NodeModal";
 
 let id = 1;
 const getId = () => `${id++}`;
@@ -54,7 +46,7 @@ const ColorModeFlow = () => {
     [setEdges]
   );
 
-  const onConnectEnd = useCallback(
+  const onConnectEnd: OnConnectEnd = useCallback(
     (event, connectionState) => {
       if (!connectionState.isValid) {
         const { clientX, clientY } =
@@ -79,7 +71,7 @@ const ColorModeFlow = () => {
     const id = getId();
     const newNode: Node = {
       id,
-      position: newNodePosition,
+      position: newNodePosition!,
       data: { label: nodeName },
       style: {
         backgroundColor: newNodeGender === "1" ? "#4078F9" : "#E09595",
@@ -89,16 +81,19 @@ const ColorModeFlow = () => {
     };
     console.log(newNodeGender);
 
-    setNodes((nds) => [...nds, newNode]);
+    setNodes((nds) => [...nds, newNode as AppNode]);
 
-    setEdges((eds) =>
-      eds.concat({
-        id: `edge-${id}`,
-        source: newConnectionState?.fromNode?.id,
-        target: id,
-      })
-    );
-    console.log("Parent", newConnectionState?.fromNode?.id);
+    if (newConnectionState) {
+      setEdges((eds) =>
+        eds.concat({
+          id: `edge-${id}`,
+          source: newConnectionState.fromNode?.id,
+          target: id,
+        })
+      );
+    }
+
+    console.log("Parent Node id:", newConnectionState!.fromNode.id);
     // Reset modal state
     setNodeName("");
     setNewNodePosition(null);
@@ -118,54 +113,29 @@ const ColorModeFlow = () => {
     console.log("Selected node:", selectedNode);
   }, []);
 
-  const deleteSelectedNode = useCallback(
-    (connectionState: OnConnectEnd) => {
-      if (!selectedNodeId) return;
+  const deleteSelectedNode = useCallback(() => {
+    if (!selectedNodeId) return;
 
-      // Helper function to find all descendant nodes recursively
-      const findDescendants = (nodeId: string, nodesList: Node[]): string[] => {
-        const directChildren = nodesList
-          .filter((node) => node.parentId === nodeId)
-          .map((node) => node.id);
+    const nodesToRemove = new Set<string>();
+    const traverseNodes = (id: string) => {
+      nodesToRemove.add(id);
+      nodes.forEach((node) => {
+        if (node.parentId === id) traverseNodes(node.id);
+      });
+    };
 
-        return directChildren.reduce(
-          (acc, childId) => [...acc, ...findDescendants(childId, nodesList)],
-          directChildren
-        );
-      };
+    traverseNodes(selectedNodeId);
 
-      // Find all descendant nodes starting from the selected node
-      const descendantNodeIds = findDescendants(selectedNodeId, nodes);
+    setNodes((nds) => nds.filter((node) => !nodesToRemove.has(node.id)));
+    setEdges((eds) =>
+      eds.filter(
+        (edge) =>
+          !nodesToRemove.has(edge.source) && !nodesToRemove.has(edge.target)
+      )
+    );
 
-      // Nodes to remove (selected node + its descendants)
-      const nodesToRemove = [selectedNodeId, ...descendantNodeIds];
-
-      // Filter out the nodes to remove
-      setNodes((nds) => nds.filter((node) => !nodesToRemove.includes(node.id)));
-
-      // Filter out edges connected to the nodes to remove
-      setEdges((eds) =>
-        eds.filter(
-          (edge) =>
-            !nodesToRemove.includes(edge.source) &&
-            !nodesToRemove.includes(edge.target)
-        )
-      );
-      setEdges((eds) =>
-        eds.concat({
-          id: getId(),
-          source: connectionState.fromNode.id,
-          target: getId(),
-        })
-      );
-      setNodes((nds) => [...nds, newNode]);
-      console.log("Deleted node and its sub-tree:");
-
-      // Clear the selected node
-      setSelectedNodeId(null);
-    },
-    [selectedNodeId, setNodes, setEdges, nodes, edges]
-  );
+    setSelectedNodeId(null);
+  }, [selectedNodeId, setNodes, setEdges, nodes]);
 
   return (
     <div style={{ height: "100vh", backgroundColor: "#fff" }}>
@@ -189,53 +159,15 @@ const ColorModeFlow = () => {
         <Background />
         <Controls />
         {/* Modal for entering node name */}
-        <Modal
-          isOpen={isNameModalOpen}
-          onOpenChange={setIsNameModalOpen}
-          placement="top-center"
-          className="flex flex-col items-center flex-grow justify-center mt-20 pt-5 bg-[#585E5B] opacity-90"
-        >
-          <ModalContent>
-            <ModalBody>
-              <Input
-                placeholder="Enter Node Name"
-                value={nodeName}
-                onChange={(e) => setNodeName(e.target.value)}
-                className="w-full"
-              />
-              <Select
-                label="Select Gender"
-                className="w-full"
-                onChange={(e) => setNewNodeGender(e.target.value)}
-              >
-                {Gender.map((g) => (
-                  <SelectItem key={g.key}>{g.name}</SelectItem>
-                ))}
-              </Select>
-            </ModalBody>
-            <ModalFooter>
-              <Button
-                color="danger"
-                variant="flat"
-                className="bg-gradient-to-tr from-pink-500 to-yellow-500 hover:to-orange-500 text-white shadow-lg"
-                onPress={() => {
-                  setIsNameModalOpen(false);
-                  setNodeName("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                color="primary"
-                className="bg-gradient-to-r from-teal-400 to-blue-500 hover:from-pink-500 hover:to-orange-500 text-white shadow-lg"
-                onPress={createNodeWithName}
-              >
-                Add Node
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
 
+        <NodeModal
+          isOpen={isNameModalOpen}
+          nodeName={nodeName}
+          onNodeNameChange={setNodeName}
+          onGenderChange={setNewNodeGender}
+          onClose={() => setIsNameModalOpen(false)}
+          onSubmit={createNodeWithName}
+        />
         {/* Color Mode Panel */}
         <Panel position="top-right">
           <select onChange={onChange} data-testid="colormode-select">
