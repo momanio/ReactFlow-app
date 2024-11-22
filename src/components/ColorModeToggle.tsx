@@ -1,40 +1,31 @@
 import React from "react";
 
-interface PanelsProps {
+interface ColorModeToggleProps {
   colorMode: string;
-  setColorMode: (mode: string) => void;
-  deleteNode: () => void;
-  isDeleteDisabled: boolean;
+  onChange: (value: string) => void;
 }
 
-const Panels: React.FC<PanelsProps> = ({
+const ColorModeToggle: React.FC<ColorModeToggleProps> = ({
   colorMode,
-  setColorMode,
-  deleteNode,
-  isDeleteDisabled,
+  onChange,
 }) => {
-  return (
-    <>
-      {/* Color Mode Panel */}
-      <div className="panel top-right">
-        <select
-          onChange={(e) => setColorMode(e.target.value)}
-          value={colorMode}
-        >
-          <option value="dark">dark</option>
-          <option value="light">light</option>
-          <option value="system">system</option>
-        </select>
-      </div>
+  const handleChange: React.ChangeEventHandler<HTMLSelectElement> = (event) => {
+    onChange(event.target.value);
+  };
 
-      {/* Delete Node Panel */}
-      <div className="panel top-left">
-        <button onClick={deleteNode} disabled={isDeleteDisabled}>
-          Delete Node
-        </button>
-      </div>
-    </>
+  return (
+    <div>
+      <select
+        onChange={handleChange}
+        value={colorMode}
+        data-testid="colormode-select"
+      >
+        <option value="dark">dark</option>
+        <option value="light">light</option>
+        <option value="system">system</option>
+      </select>
+    </div>
   );
 };
 
-export default Panels;
+export default ColorModeToggle;

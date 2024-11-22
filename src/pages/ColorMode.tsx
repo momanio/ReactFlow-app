@@ -23,6 +23,7 @@ import { initialEdges, edgeTypes } from "../edges";
 import "@xyflow/react/dist/style.css";
 import { AppNode } from "../nodes/types";
 import NodeModal from "../components/NodeModal";
+import ColorModeToggle from "../components/ColorModeToggle";
 
 let id = 1;
 const getId = () => `${id++}`;
@@ -100,9 +101,6 @@ const ColorModeFlow = () => {
     setNewConnectionState(null);
     setIsNameModalOpen(false);
   };
-  const onChange: ChangeEventHandler<HTMLSelectElement> = (evt) => {
-    setColorMode(evt.target.value as ColorMode);
-  };
 
   // Add new node function
 
@@ -170,11 +168,10 @@ const ColorModeFlow = () => {
         />
         {/* Color Mode Panel */}
         <Panel position="top-right">
-          <select onChange={onChange} data-testid="colormode-select">
-            <option value="dark">dark</option>
-            <option value="light">light</option>
-            <option value="system">system</option>
-          </select>
+          <ColorModeToggle
+            colorMode={colorMode}
+            onChange={(mode) => setColorMode(mode as ColorMode)}
+          />
         </Panel>
 
         {/* New Node Panel */}
